@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Model files (too large for git)
+*.h5
+*.ckpt
+*.pkl
+*.pickle
+*.pt
+*.pth
+
+# Data (license restrictions)
+data/datasets/
+data/model/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment
+*.env
+.conda/
