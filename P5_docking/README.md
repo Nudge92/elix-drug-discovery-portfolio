@@ -6,6 +6,8 @@ This project validates the computational drug discovery pipeline (P1→P2→P3) 
 
 **Key question:** Do computationally generated molecules actually bind to the EGFR target, and how do they compare to existing drugs?
 
+![P5 Dashboard](results/figures/p5_docking_dashboard.png)
+
 ## Experimental design
 
 ### Docking targets — 7 PDB structures
@@ -80,6 +82,8 @@ Total docking runs: ~4,350 (GNINA on GPU, Vina on CPU, run in parallel).
 
 **Observation:** GNINA and Vina rank the reference drugs differently — Osimertinib is #1 in GNINA but #5 in Vina. This reflects the fundamental difference between CNN-learned and physics-based scoring functions.
 
+![Reference Drugs Comparison](results/figures/p5_reference_drugs_comparison.png)
+
 ### 3. Generated molecules — 1st screening (200 molecules)
 
 **GNINA:**
@@ -127,6 +131,8 @@ Note: negative r indicates agreement because GNINA (higher = better) and Vina (l
 | mol_0197 | #1 | #52 | GNINA-only — CNN bias possible |
 | mol_0179 | #38 | #2 | Vina-only — force-field preference |
 
+![GNINA vs Vina Scatter](results/figures/p5_gnina_vs_vina_scatter.png)
+
 ### 5. Consensus ranking — top 10
 
 Molecules ranked highly by **both** docking tools (average of GNINA rank + Vina rank):
@@ -149,6 +155,8 @@ Molecules ranked highly by **both** docking tools (average of GNINA rank + Vina 
 - Random 100: **4/10**
 - Diverse 50: **6/10** — structural diversity yields better docking candidates
 
+![Consensus Ranking](results/figures/p5_consensus_ranking.png)
+
 ### 6. Reproducibility — 2nd refinement (30 molecules × 3 seeds)
 
 **GNINA (exhaustiveness=32, seeds=0/42/123):**
@@ -167,6 +175,8 @@ Molecules ranked highly by **both** docking tools (average of GNINA rank + Vina 
 
 All PDB structures show mean std < 0.07 kcal/mol — Vina results are highly reproducible.
 
+![Reproducibility](results/figures/p5_reproducibility.png)
+
 ### 7. ML prediction vs docking correlation
 
 | Comparison | Pearson r | Interpretation |
@@ -175,6 +185,8 @@ All PDB structures show mean std < 0.07 kcal/mol — Vina results are highly rep
 | EGFR (ML) vs Vina 4ZAU | −0.083 | No correlation |
 
 ML prediction (LightGBM, 2D fingerprint-based) and physics-based docking (3D structure-based) evaluate different molecular properties. This divergence justifies multi-level validation.
+
+![ML vs Docking](results/figures/p5_ml_vs_docking.png)
 
 ### 8. Cross-PDB robustness
 
@@ -299,14 +311,3 @@ nohup python -u scripts/vina_validation.py \
 | `reference_drugs_vina.csv` | Vina results for 7 reference drugs × 7 PDB |
 | `vina_docking_results.csv` | Vina 1st screening (200 molecules × 7 PDB) |
 | `vina_docking_refined.csv` | Vina 2nd refinement (top 30 × 3 seeds × 7 PDB) |
-
-## Visualizations
-
-| Figure | Description |
-|--------|------------|
-| `p5_reference_drugs_comparison.png` | 1–4G reference drugs GNINA affinity across 7 PDB |
-| `p5_gnina_vs_vina_scatter.png` | GNINA vs Vina cross-validation scatter (200 molecules) |
-| `p5_ml_vs_docking.png` | ML prediction vs docking score correlation |
-| `p5_consensus_ranking.png` | Consensus top 10 with sampling group annotation |
-| `p5_reproducibility.png` | Multi-seed reproducibility per PDB structure |
-| `p5_docking_dashboard.png` | Combined dashboard with all key results |
