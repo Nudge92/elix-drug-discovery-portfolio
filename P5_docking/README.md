@@ -4,7 +4,7 @@
 
 This project validates the computational drug discovery pipeline (P1→P2→P3) using molecular docking as an independent, physics-based evaluation layer. 200 generated molecules from the optimal DyRAMO configuration (P3) are docked against 7 EGFR crystal structures using two complementary docking tools — GNINA (CNN-based scoring) and AutoDock Vina (force-field-based scoring) — and benchmarked against 7 clinically approved/investigational EGFR inhibitors spanning four generations.
 
-**Key question:** Do computationally generated molecules actually bind to the EGFR target, and how do they compare to existing drugs?
+**Key question:** Do computationally generated molecules actually bind to the EGFR target, how do they compare to existing drugs, and can they be synthesized from commercially available reagents?
 
 ![P5 Dashboard](results/figures/p5_docking_dashboard.png)
 
@@ -200,6 +200,36 @@ Same molecules docked to the same target (T790M) in different crystal structures
 
 4ZAU consistently produces higher scores than 4G5J. This reflects **conformational bias** — the co-crystallized ligand shapes the binding pocket via induced fit, and our quinazoline-based molecules fit the Osimertinib-shaped pocket (4ZAU) better than the Afatinib-shaped pocket (4G5J).
 
+### 9. Retrosynthesis analysis — synthetic feasibility (AiZynthFinder)
+
+The consensus top 5 molecules were evaluated for synthetic feasibility using [AiZynthFinder](https://github.com/MolecularAI/aizynthfinder) with the USPTO-trained expansion policy and ZINC stock database.
+
+| Rank | Molecule | Score | Steps | Materials | Solved? | GNINA (4ZAU) | Vina (4ZAU) |
+|------|---------|-------|-------|-----------|---------|-------------|-------------|
+| 1 | **mol_0175** | **0.994** | 2 | 3 | **Yes** | 7.73 | −8.26 |
+| 2 | mol_0083 | 0.975 | 4 | 4 | **Yes** | 7.57 | −8.89 |
+| 3 | mol_0194 | 0.956 | 6 | 5 | **Yes** | 7.75 | −8.66 |
+| 4 | mol_0147 | 0.773 | 6 | 5 | No | 7.80 | −8.74 |
+| 5 | mol_0188 | 0.738 | 4 | 4 | No | 7.55 | −9.01 |
+
+**"Solved"** means AiZynthFinder decomposed the target molecule entirely into commercially available starting materials (ZINC database). Unsolved routes contain at least one intermediate requiring custom synthesis.
+
+**Key synthesis routes:**
+
+- **mol_0175** (score 0.994, 2 steps): SNAr coupling of 4-chloro-6,7-dimethoxyquinazoline with 3-aminobenzyl bromide, followed by O-alkylation with a triazole alcohol. All 3 starting materials are commercially available. Simplest route among all candidates.
+- **mol_0083** (score 0.975, 4 steps): Suzuki coupling → SNAr → nitro reduction → N-alkylation with 4-hydroxypiperidine. Standard medicinal chemistry transformations, all 4 starting materials in ZINC stock.
+- **mol_0194** (score 0.956, 6 steps): Suzuki coupling → ester hydrolysis → alkylation → SNAr → nitro reduction → Grignard addition. Longer route but fully solved with 5 commercially available reagents.
+- **mol_0147** (score 0.773, unsolved): The consensus #1 by docking, but requires a fluoroalkyl-naphthyridine intermediate not available commercially. Custom synthesis of this intermediate would add multiple additional steps.
+- **mol_0188** (score 0.738, unsolved): Contains an indazole-nitroaniline intermediate not in ZINC stock.
+
+**Common scaffold:** All 5 molecules share the 4-chloro-6,7-dimethoxyquinazoline core — the same scaffold as Gefitinib and Erlotinib (1G EGFR inhibitors). This commercially available building block serves as the universal starting point for all synthesis routes.
+
+**Binding affinity vs synthetic feasibility trade-off:** mol_0147 achieves the highest GNINA affinity (7.80) but the lowest synthesis score (0.773, unsolved). mol_0175 has slightly lower affinity (7.73) but near-perfect synthetic accessibility (0.994, 2 steps). This inverse relationship is typical in drug discovery — structural complexity that improves target binding often complicates synthesis.
+
+**Practical recommendation:** mol_0175 (2-step, all materials in stock) as the primary lead compound, with mol_0083 (4-step, fully solved) as backup. mol_0147 could be pursued if the naphthyridine intermediate synthesis route is established separately.
+
+![Retrosynthesis Analysis](results/figures/p6_retrosynthesis_analysis.png)
+
 ## Pharmacological interpretation
 
 ### Why generated molecules do not exceed Osimertinib
@@ -265,7 +295,8 @@ P1 (kMoL)         → ADMET prediction models (GNN architecture selection)
 P2 (ChemTSv2)     → Molecular generation (reward design, MCTS policy optimization)
 P3 (DyRAMO)       → Multi-objective optimization (AD ablation, reward hacking discovery)
 P4 (kMoL→DyRAMO)  → Pipeline integration (reward signal collapse reproduction)
-P5 (Docking)       → Physics-based validation (GNINA + Vina cross-validation) ← this project
+P5 (Docking)       → Physics-based validation (GNINA + Vina cross-validation)
+P5 (Retrosynthesis)→ Synthetic feasibility (AiZynthFinder, USPTO + ZINC) ← this project
 ```
 
 The Reward Design Spectrum discovered in P2–P4 (Signal Collapse ↔ Optimal ↔ Reward Hacking) is complemented by P5's finding that **ML prediction and physics-based validation evaluate different aspects of molecular quality**. A complete drug discovery pipeline requires both computational layers.
@@ -302,6 +333,15 @@ nohup python -u scripts/vina_validation.py \
     > vina_log.txt 2>&1 &
 ```
 
+### Retrosynthesis (AiZynthFinder)
+```bash
+conda activate retro
+cd /home/nudge/Project/elix/retrosynthesis
+python scripts/run_retro.py          # Run AiZynthFinder on consensus top 5
+python scripts/extract_routes.py     # Extract reaction steps and starting materials
+python scripts/visualize_retro.py    # Generate p6_retrosynthesis_analysis.png
+```
+
 ### Output files
 | File | Description |
 |------|------------|
@@ -311,3 +351,4 @@ nohup python -u scripts/vina_validation.py \
 | `reference_drugs_vina.csv` | Vina results for 7 reference drugs × 7 PDB |
 | `vina_docking_results.csv` | Vina 1st screening (200 molecules × 7 PDB) |
 | `vina_docking_refined.csv` | Vina 2nd refinement (top 30 × 3 seeds × 7 PDB) |
+| `p6_retrosynthesis_analysis.png` | Retrosynthesis feasibility visualization |
