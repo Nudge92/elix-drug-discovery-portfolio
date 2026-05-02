@@ -44,22 +44,22 @@ ML-predicted top candidates and physics-based docking top candidates are **diffe
 | **P1** | [Property Prediction](P1_property_prediction/) | kMoL | 20+ configs | GNN layer choice depends on ADMET task; FP+XGBoost beats GNN on hepatic clearance |
 | **P2** | [Molecular Generation](P2_molecular_generation/) | ChemTSv2 | 33 configs | Step(1.0→0.1) adaptive scheduling: selectivity +0.64, 10× over default |
 | **P3+P4** | [Multi-objective Optimization](P3_multiobjective/) | DyRAMO + kMoL | 27 configs | AD threshold cliff at 0.7; Perm AD most critical; kMoL signal collapse reconfirmed |
-| **P5** | [Docking Benchmark](P5_docking/) | GNINA + Vina | 4,350 docks | GNINA-Vina consensus identifies mol_0147 as top candidate; diversity sampling finds 6/10 consensus top |
+| **P5** | [Docking + Retrosynthesis](P5_docking/) | GNINA + Vina + AiZynthFinder | 4,350 docks + 5 retro | GNINA-Vina consensus top 5 → retrosynthesis: 3/5 fully solved, mol_0175 (2-step, score 0.994) as lead |
 
 ---
 
 ## Pipeline Architecture
 
 ```
-P1. kMoL              P2. ChemTSv2           P3. DyRAMO             P5. Docking
-┌────────────┐        ┌──────────────┐        ┌──────────────┐       ┌──────────────┐
-│ GNN ADMET  │─reward─│ MCTS molecule│◄──BO──►│ Multi-obj    │─top──►│ GNINA (CNN)  │
-│ prediction │ signal │ generation   │        │ optimization │ 200   │ Vina (physics)│
-│ (5 layers) │        │ (33 configs) │        │ (AD ablation)│       │ (7 PDB × 2)  │
-└────────────┘        └──────────────┘        └──────────────┘       └──────────────┘
-                                                                      ↓
-                                                                   Consensus
-                                                                   ranking
+P1. kMoL              P2. ChemTSv2           P3. DyRAMO             P5. Docking            P5. Retrosynthesis
+┌────────────┐        ┌──────────────┐        ┌──────────────┐       ┌──────────────┐       ┌──────────────┐
+│ GNN ADMET  │─reward─│ MCTS molecule│◄──BO──►│ Multi-obj    │─top──►│ GNINA (CNN)  │─top──►│ AiZynthFinder│
+│ prediction │ signal │ generation   │        │ optimization │ 200   │ Vina (physics)│  5   │ (USPTO+ZINC) │
+│ (5 layers) │        │ (33 configs) │        │ (AD ablation)│       │ (7 PDB × 2)  │       │ synth routes │
+└────────────┘        └──────────────┘        └──────────────┘       └──────────────┘       └──────────────┘
+                                                                      ↓                      ↓
+                                                                   Consensus              3/5 solved
+                                                                   ranking               mol_0175 lead
 ```
 
 ---
@@ -81,6 +81,8 @@ Every experiment includes pharmaceutical interpretation that a general ML engine
 | `chemtsv2/utils.py` patch | 5 | RNN prior probability return |
 | `dock_candidates.py` | 350 | 7-PDB GNINA docking pipeline with 2-stage refinement |
 | `vina_validation.py` | 400 | Vina cross-validation with GNINA-Vina consensus analysis |
+| `run_retro.py` | 30 | AiZynthFinder retrosynthesis for consensus top 5 |
+| `extract_routes.py` | 45 | Reaction step and starting material extraction |
 
 ---
 
@@ -95,6 +97,8 @@ Every experiment includes pharmaceutical interpretation that a general ML engine
 | Generated molecules docked | 200 (stratified: top50 + random100 + diverse50) |
 | Best consensus candidate | mol_0147 (GNINA #2, Vina #1) |
 | GNINA-Vina correlation | r = −0.46 (moderate agreement) |
+| Retrosynthesis (top 5) | 3/5 fully solved; mol_0175 best (score 0.994, 2 steps) |
+| Recommended lead compound | mol_0175 (GNINA 7.73, Vina −8.26, synth score 0.994) |
 
 ---
 
@@ -107,6 +111,7 @@ Every experiment includes pharmaceutical interpretation that a general ML engine
 | [DyRAMO](https://github.com/molecule-generator-collection/DyRAMO) | Elix | Dynamic reliability-aware multi-objective optimization |
 | [GNINA](https://github.com/gnina/gnina) | Koes Lab | CNN-based molecular docking |
 | [AutoDock Vina](https://github.com/ccsb-scripps/AutoDock-Vina) | Scripps | Physics-based molecular docking |
+| [AiZynthFinder](https://github.com/MolecularAI/aizynthfinder) | AstraZeneca / MolecularAI | Retrosynthesis route prediction (USPTO + ZINC) |
 
 ---
 
